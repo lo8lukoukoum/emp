@@ -1,86 +1,61 @@
--- Create a database for an employment registration system
-CREATE DATABASE employment_registration_system;
+-- 1. 创建数据库
 
--- Use the created database
-USE employment_registration_system;
+CREATE DATABASE IF NOT EXISTS employment_registration_system DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; USE employment_registration_system;
 
--- Create a table for job seekers
-CREATE TABLE job_seekers (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    full_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    phone_number VARCHAR(20) NOT NULL,
-    resume VARCHAR(255) NOT NULL, -- Path to the resume file
-    skills TEXT, -- Comma-separated list of skills
-    experience TEXT, -- Description of work experience
-    education TEXT, -- Description of educational background
-    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- 2. 创建表结构
 
--- Create a table for employers
-CREATE TABLE employers (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    company_name VARCHAR(255) NOT NULL,
-    industry VARCHAR(100),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    phone_number VARCHAR(20) NOT NULL,
-    company_description TEXT,
-    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- 专业表 CREATE TABLE major ( id INT AUTO_INCREMENT PRIMARY KEY, major_name VARCHAR(50) NOT NULL COMMENT '专业名称', department VARCHAR(50) NOT NULL COMMENT '所属院系', create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, UNIQUE KEY (major_name) ) COMMENT='专业表';
 
--- Create a table for job listings
-CREATE TABLE job_listings (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    employer_id INT,
-    job_title VARCHAR(255) NOT NULL,
-    job_description TEXT NOT NULL,
-    required_skills TEXT,
-    salary_range VARCHAR(100),
-    location VARCHAR(100),
-    posted_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (employer_id) REFERENCES employers(id)
-);
+-- 班级表 CREATE TABLE class ( id INT AUTO_INCREMENT PRIMARY KEY, class_name VARCHAR(50) NOT NULL COMMENT '班级名称', major_id INT NOT NULL COMMENT '专业ID', grade VARCHAR(20) NOT NULL COMMENT '年级', create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (major_id) REFERENCES major(id), UNIQUE KEY (class_name, grade) ) COMMENT='班级表';
 
--- Create a table for applications
-CREATE TABLE applications (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    job_seeker_id INT,
-    job_listing_id INT,
-    application_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    cover_letter TEXT,
-    status VARCHAR(50) DEFAULT 'Pending', -- e.g., Pending, Shortlisted, Rejected, Hired
-    FOREIGN KEY (job_seeker_id) REFERENCES job_seekers(id),
-    FOREIGN KEY (job_listing_id) REFERENCES job_listings(id)
-);
+-- 用户表 CREATE TABLE user ( id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(50) NOT NULL COMMENT '用户名/学号/工号', password VARCHAR(100) NOT NULL COMMENT '密码', real_name VARCHAR(50) NOT NULL COMMENT '真实姓名', gender VARCHAR(10) NOT NULL COMMENT '性别', user_type TINYINT NOT NULL COMMENT '用户类型：1-学生，2-辅导员', phone VARCHAR(20) NULL COMMENT '联系电话', email VARCHAR(100) NULL COMMENT '电子邮箱', class_id INT NULL COMMENT '班级ID（学生专用）', create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-禁用，1-启用', UNIQUE KEY (username), FOREIGN KEY (class_id) REFERENCES class(id), INDEX idx_user_class (class_id) ) COMMENT='用户表';
 
--- Insert some sample data for job seekers
-INSERT INTO job_seekers (full_name, email, phone_number, resume, skills, experience, education) VALUES
-('John Doe', 'john.doe@example.com', '123-456-7890', 'path/to/resume1.pdf', 'Java, Python, SQL', '5 years of experience in software development', 'Bachelor of Science in Computer Science'),
-('Jane Smith', 'jane.smith@example.com', '987-654-3210', 'path/to/resume2.pdf', 'Marketing, SEO, Content Creation', '3 years of experience in digital marketing', 'Master of Business Administration');
+-- 企业表 CREATE TABLE company ( id INT AUTO_INCREMENT PRIMARY KEY, company_name VARCHAR(100) NOT NULL COMMENT '企业名称', company_type VARCHAR(50) NOT NULL COMMENT '企业类型', contact_person VARCHAR(50) NULL COMMENT '联系人', contact_phone VARCHAR(20) NULL COMMENT '联系电话', address VARCHAR(200) NULL COMMENT '企业地址', description TEXT NULL COMMENT '企业描述', create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, UNIQUE KEY (company_name) ) COMMENT='企业表';
 
--- Insert some sample data for employers
-INSERT INTO employers (company_name, industry, email, phone_number, company_description) VALUES
-('Acme Corp', 'Technology', 'hr@acme.com', '555-123-4567', 'A leading technology company specializing in software solutions.'),
-('Globex Corporation', 'Manufacturing', 'careers@globex.com', '555-987-6543', 'A global manufacturing company with a focus on innovation.');
+-- 岗位表 CREATE TABLE job_position ( id INT AUTO_INCREMENT PRIMARY KEY, company_id INT NOT NULL COMMENT '企业ID', position_name VARCHAR(100) NOT NULL COMMENT '岗位名称', position_requirement TEXT NULL COMMENT '岗位要求', salary_range VARCHAR(50) NULL COMMENT '薪资范围', job_type VARCHAR(50) NULL COMMENT '工作类型（全职/实习）', create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (company_id) REFERENCES company(id), INDEX idx_position_company (company_id) ) COMMENT='岗位表';
 
--- Insert some sample data for job listings
-INSERT INTO job_listings (employer_id, job_title, job_description, required_skills, salary_range, location) VALUES
-(1, 'Software Engineer', 'We are looking for a skilled software engineer to join our team.', 'Java, Spring Boot, REST APIs', '$80,000 - $100,000', 'New York, NY'),
-(2, 'Marketing Manager', 'We are seeking an experienced marketing manager to lead our marketing efforts.', 'Digital Marketing, SEO, Social Media', '$70,000 - $90,000', 'San Francisco, CA');
+-- 就业信息表 CREATE TABLE employment_info ( id INT AUTO_INCREMENT PRIMARY KEY, student_id INT NOT NULL COMMENT '学生ID', company_id INT NOT NULL COMMENT '企业ID', position_id INT NOT NULL COMMENT '岗位ID', company_name VARCHAR(200) NOT NULL COMMENT '就业单位名称（冗余字段，方便查询）', position VARCHAR(100) NOT NULL COMMENT '就业岗位（冗余字段，方便查询）', salary DECIMAL(10,2) NULL COMMENT '薪资', employment_type TINYINT NOT NULL COMMENT '就业类型：1-企业，2-事业单位，3-公务员，4-自主创业，5-升学，6-其他', employment_date DATE NOT NULL COMMENT '就业日期', contract_period INT NULL COMMENT '合同期限（月）', location VARCHAR(200) NULL COMMENT '工作地点', description TEXT NULL COMMENT '工作描述', proof_material VARCHAR(255) NOT NULL COMMENT '证明材料文件路径', status TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-待审核，1-已通过，2-已拒绝', reviewer_id INT NULL COMMENT '审核人ID', review_time DATETIME NULL COMMENT '审核时间', reject_reason VARCHAR(500) NULL COMMENT '拒绝理由', create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (student_id) REFERENCES user(id), FOREIGN KEY (reviewer_id) REFERENCES user(id), FOREIGN KEY (company_id) REFERENCES company(id), FOREIGN KEY (position_id) REFERENCES job_position(id), INDEX idx_employment_student (student_id), INDEX idx_employment_company (company_id), INDEX idx_employment_position (position_id), INDEX idx_employment_status (status) ) COMMENT='就业信息表';
 
--- Insert some sample data for applications
-INSERT INTO applications (job_seeker_id, job_listing_id, cover_letter) VALUES
-(1, 1, 'I am very interested in the Software Engineer position at Acme Corp...'),
-(2, 2, 'I am excited to apply for the Marketing Manager position at Globex Corporation...');
+-- 审核记录表 CREATE TABLE review_record ( id INT AUTO_INCREMENT PRIMARY KEY, employment_id INT NOT NULL COMMENT '就业信息ID', reviewer_id INT NOT NULL COMMENT '审核人ID', review_result TINYINT NOT NULL COMMENT '审核结果：1-通过，2-拒绝', reject_reason VARCHAR(500) NULL COMMENT '拒绝理由', review_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (employment_id) REFERENCES employment_info(id), FOREIGN KEY (reviewer_id) REFERENCES user(id), INDEX idx_review_employment (employment_id), INDEX idx_review_reviewer (reviewer_id) ) COMMENT='审核记录表';
 
--- Retrieve all job seekers
-SELECT * FROM job_seekers;
+-- 3. 插入基础数据
 
--- Retrieve all job listings
-SELECT * FROM job_listings;
+-- 插入专业数据 INSERT INTO major (major_name, department) VALUES ('软件工程', '信息学院'), ('计算机科学与技术', '信息学院'), ('智能科学与技术', '信息学院'), ('物联网工程', '信息学院');
 
--- Retrieve applications for a specific job listing
-SELECT js.full_name, js.email, a.application_date, a.status
-FROM applications a
-JOIN job_seekers js ON a.job_seeker_id = js.id
-WHERE a.job_listing_id = 1;
+-- 插入班级数据 INSERT INTO class (class_name, major_id, grade) VALUES ('软件2101班', 1, '2021'), ('软件2102班', 1, '2021'), ('软件2103班', 1, '2021'), ('计算机2101班', 2, '2021'), ('智能2101班', 3, '2021'), ('智能2102班', 3, '2021'), ('物联网2101班', 4, '2021');
+
+-- 插入辅导员用户数据 INSERT INTO user (username, password, real_name, gender, user_type, phone, email, class_id) VALUES ('teacher001', '123456', '张老师', '男', 2, '13800138001', 'zhang@example.com', NULL), ('teacher002', '123456', '李老师', '女', 2, '13800138002', 'li@example.com', NULL);
+
+-- 插入学生用户数据 INSERT INTO user (username, password, real_name, gender, user_type, phone, email, class_id) VALUES ('CIE21061', '123456', '尤文韬', '男', 1, '13900000001', 'CIE21061@example.com', 1), ('CIE23110', '123456', '王佳琳', '女', 1, '13900000002', 'CIE23110@example.com', 1), ('ECM20060', '123456', '刘松岳', '男', 1, '13900000003', 'ECM20060@example.com', 1), ('ECM22067', '123456', '何文慧', '女', 1, '13900000004', 'ECM22067@example.com', 1), ('EMC23007', '123456', '卢嫣', '女', 1, '13900000005', 'EMC23007@example.com', 1), ('FNM22054', '123456', '王佳程', '男', 1, '13900000006', 'FNM22054@example.com', 4), ('IBT20114', '123456', '赵浩男', '男', 1, '13900000007', 'IBT20114@example.com', 1), ('INB23020', '123456', '潘宇欣', '女', 1, '13900000008', 'INB23020@example.com', 1), ('IST22011', '123456', '许家瑜', '男', 1, '13900000009', 'IST22011@example.com', 5), ('IST22024', '123456', '陈豪', '男', 1, '13900000010', 'IST22024@example.com', 5), ('IST22026', '123456', '陈烨', '男', 1, '13900000011', 'IST22026@example.com', 5), ('IST22028', '123456', '刘其缘', '男', 1, '13900000012', 'IST22028@example.com', 5), ('IST22033', '123456', '修宇彤', '女', 1, '13900000013', 'IST22033@example.com', 1), ('IST22043', '123456', '蒋如霖', '男', 1, '13900000014', 'IST22043@example.com', 5), ('IST22052', '123456', '王永嘉', '男', 1, '13900000015', 'IST22052@example.com', 5), ('IST22056', '123456', '贾顺超', '男', 1, '13900000016', 'IST22056@example.com', 5), ('IST22058', '123456', '毛泓力', '男', 1, '13900000017', 'IST22058@example.com', 5), ('ITT22002', '123456', '杨茂之', '男', 1, '13900000018', 'ITT22002@example.com', 7), ('ITT22040', '123456', '洪鑫豪', '男', 1, '13900000019', 'ITT22040@example.com', 7), ('LAW22019', '123456', '江毅', '男', 1, '13900000020', 'LAW22019@example.com', 1), ('MDA21070', '123456', '陈望龙', '男', 1, '13900000021', 'MDA21070@example.com', 1), ('PAM23025', '123456', '陈舒涵', '女', 1, '13900000022', 'PAM23025@example.com', 1), ('ROE21031', '123456', '吕玥', '女', 1, '13900000023', 'ROE21031@example.com', 1), ('SWE22036', '123456', '冯渊', '男', 1, '13900000024', 'SWE22036@example.com', 1), ('SWE22051', '123456', '刘庆乐', '男', 1, '13900000025', 'SWE22051@example.com', 1), ('SWE22062', '123456', '徐湘如', '女', 1, '13900000026', 'SWE22062@example.com', 1), ('SWE22066', '123456', '经佑晟', '男', 1, '13900000027', 'SWE22066@example.com', 1), ('SWE23003', '123456', '黄柄源', '男', 1, '13900000028', 'SWE23003@example.com', 1), ('SWE23008', '123456', '陈正扬', '男', 1, '13900000029', 'SWE23008@example.com', 1), ('SWE23010', '123456', '张煜麟', '男', 1, '13900000030', 'SWE23010@example.com', 1), ('SWE23011', '123456', '王嘉豪', '男', 1, '13900000031', 'SWE23011@example.com', 1), ('SWE23014', '123456', '林嘉伟', '男', 1, '13900000032', 'SWE23014@example.com', 1), ('SWE23015', '123456', '谢慧翔', '男', 1, '13900000033', 'SWE23015@example.com', 1), ('SWE23018', '123456', '林博航', '男', 1, '13900000034', 'SWE23018@example.com', 1), ('SWE23028', '123456', '李金阳', '男', 1, '13900000035', 'SWE23028@example.com', 1), ('SWE23032', '123456', '张英驰', '男', 1, '13900000036', 'SWE23032@example.com', 1), ('SWE23033', '123456', '高羽', '女', 1, '13900000037', 'SWE23033@example.com', 1), ('SWE23034', '123456', '江俊泰', '男', 1, '13900000038', 'SWE23034@example.com', 1), ('SWE23035', '123456', '韦逸帆', '男', 1, '13900000039', 'SWE23035@example.com', 1), ('SWE23037', '123456', '陈宗煦', '男', 1, '13900000040', 'SWE23037@example.com', 1), ('SWE23041', '123456', '杨李成', '男', 1, '13900000041', 'SWE23041@example.com', 1), ('SWE23043', '123456', '谢瑜琦', '男', 1, '13900000042', 'SWE23043@example.com', 1), ('SWE23044', '123456', '李孟轲', '男', 1, '13900000043', 'SWE23044@example.com', 1), ('SWE23047', '123456', '彭嘉鑫', '男', 1, '13900000044', 'SWE23047@example.com', 1), ('SWE23049', '123456', '肖敬贤', '男', 1, '13900000045', 'SWE23049@example.com', 1), ('SWE23053', '123456', '汤铭峰', '男', 1, '13900000046', 'SWE23053@example.com', 1), ('SWE23062', '123456', '郑彩鑫', '女', 1, '13900000047', 'SWE23062@example.com', 1), ('SWE23064', '123456', '郑幸均', '男', 1, '13900000048', 'SWE23064@example.com', 1), ('SWE23068', '123456', '沈炎彪', '男', 1, '13900000049', 'SWE23068@example.com', 1), ('SWE23076', '123456', '崔洛齐', '男', 1, '13900000050', 'SWE23076@example.com', 1), ('SWE23081', '123456', '康嘉锋', '男', 1, '13900000051', 'SWE23081@example.com', 1), ('SWE23084', '123456', '戴东冶', '男', 1, '13900000052', 'SWE23084@example.com', 1), ('SWE23085', '123456', '赵炫南', '男', 1, '13900000053', 'SWE23085@example.com', 1), ('SWE23089', '123456', '张世豪', '男', 1, '13900000054', 'SWE23089@example.com', 1), ('SWE23090', '123456', '张力文', '男', 1, '13900000055', 'SWE23090@example.com', 1), ('TRM23004', '123456', '沈艺霏', '女', 1, '13900000056', 'TRM23004@example.com', 1), ('UBP23030', '123456', '杨铮旭', '男', 1, '13900000057', 'UBP23030@example.com', 1), ('WSE21018', '123456', '余智航', '男', 1, '13900000058', 'WSE21018@example.com', 1), ('WSE23004', '123456', '侯子博', '男', 1, '13900000059', 'WSE23004@example.com', 4);
+
+-- 插入企业数据 INSERT INTO company (company_name, company_type, contact_person, contact_phone, address) VALUES ('厦门柏孜科技有限公司', '制造业', 'HR', '13800000001', '厦门市'), ('厦门三安光电有限公司', '制造业', 'HR', '13800000002', '厦门市'), ('昕达丰（漳州）网络科技有限公司', '电商', 'HR', '13800000003', '漳州市'), ('安安（中国）有限公司', '制造业', 'HR', '13800000004', '漳州市'), ('东莞证券股份有限公司厦门分公司', '金融', 'HR', '13800000005', '厦门市'), ('福建福山轴承有限公司', '制造业', 'HR', '13800000006', '福州市'), ('明达实业（厦门）有限公司', '制造业', 'HR', '13800000007', '厦门市'), ('厦门安娃文化艺术培训有限公司', '教育', 'HR', '13800000008', '厦门市'), ('厦门市思明区育龙课外培训学校', '教育', 'HR', '13800000009', '厦门市'), ('厦门肆大名补科技有限公司', '教育', 'HR', '13800000010', '厦门市'), ('厦门小盐网络科技有限公司', '教育', 'HR', '13800000011', '厦门市'), ('华宝证券股份有限公司厦门吕岭路证券营业部', '金融、证券', 'HR', '13800000012', '厦门市'), ('厦门千万艺进出口有限公司', '跨境电商', 'HR', '13800000013', '厦门市'), ('漳州慕美网络科技有限公司', '小微企业', 'HR', '13800000014', '漳州市'), ('漳州开发区贝蒂教育咨询服务服务部', '个体工商户', 'HR', '13800000015', '漳州市'), ('厦门未来魔法智习科技有限公司', '教育培训', 'HR', '13800000016', '厦门市'), ('快乐学习（厦门）文化有限公司', '教育', 'HR', '13800000017', '厦门市'), ('华图教育科技有限公司漳州分公司', '教育咨询', 'HR', '13800000018', '漳州市'), ('豪氏威马（中国）有限公司', '外企', 'HR', '13800000019', '漳州市'), ('漳州中集集装箱有限公司', '国有控股', 'HR', '13800000020', '漳州市'), ('福建中集新能源科技有限公司', '有限责任公司', 'HR', '13800000021', '漳州市'), ('华东（福建）精炼糖有限公司', '有限责任公司', 'HR', '13800000022', '漳州市'), ('金钱（漳州）实业有限公司', '外资企业', 'HR', '13800000023', '漳州市'), ('维博（福建）卫浴科技有限公司', '私营企业', 'HR', '13800000024', '漳州市'), ('漳州雅信模塑科技有限公司', '私企', 'HR', '13800000025', '漳州市'), ('中信重工装备制造（漳州）有限公司', '国企', 'HR', '13800000026', '漳州市'), ('漳州市蕾钖工贸有限公司', '私营', 'HR', '13800000027', '漳州市'), ('福州捷信资产管理有限公司漳州分公司', '有限责任公司分公司', 'HR', '13800000028', '漳州市'), ('福建侨龙特种装备有限公司', '制造业', 'HR', '13800000029', '漳州市'), ('厦门市思明区新东方教育培训学校', '教育', 'HR', '13800000030', '厦门市'), ('漳州铠盛金属科技有限公司', '民企', 'HR', '13800000031', '漳州市');
+
+-- 插入岗位数据 INSERT INTO job_position (company_id, position_name, position_requirement, salary_range, job_type) VALUES (1, '机械机构工程师', '机械制造或机电一体化专业毕业', NULL, '全职'), (1, '机械绘图工程师', '机械制造或机电一体化专业毕业', NULL, '全职'), (1, '工艺工程师', '能熟练掌握CAD和solidworks等制图软件', NULL, '全职'), (1, '电气工程师', '电气工程相关专业毕业', NULL, '全职'), (2, '电气工程师', '电气工程相关专业毕业', NULL, '全职'), (2, '设备技术员', '专业不限，工科类专业优先', NULL, '全职'), (2, '质量检测员', '专业不限，工科类专业优先', NULL, '全职'), (3, '电商运营', '专业不限', NULL, '全职'), (3, '带货主播', '专业不限', NULL, '全职'), (3, '电商视频创作', '专业不限', NULL, '全职'), (3, '兼职短视频创作专员', '专业不限', NULL, '兼职'), (4, '储备干部（生产）', '机械、化工相关专业', NULL, '全职'), (4, '研发储干', '化工化学高分子相关专业', NULL, '全职'), (4, '市场企划专员', '商务英语专业', NULL, '全职'), (5, '理财顾问', '专业不限', NULL, '全职'), (5, '互联网营销', '专业不限', NULL, '全职'), (5, '实习生', '专业不限', NULL, '实习'), (6, '储备干部', '会画CAD图纸', NULL, '全职'), (6, '俄语外贸客服', '俄语', NULL, '全职'), (7, '技术研发类储备干部', '专业不限，英语口语熟练', NULL, '全职'), (7, '生产管理类储备干部', '专业不限，英语口语熟练', NULL, '全职'), (7, '运营管理类储备干部', '专业不限，英语口语熟练', NULL, '全职'), (8, '英语老师', '专业不限，大学六级以上', NULL, '全职'), (8, '学管师', '专业不限', NULL, '全职'), (8, '英语绘本助教', '专业不限', NULL, '全职'), (9, '小学数学老师', '专业不限', NULL, '全职'), (9, '初中数学老师', '专业不限', NULL, '全职'), (9, '高中数学老师', '专业不限', NULL, '全职'), (9, '初中物理老师', '专业不限', NULL, '全职'), (9, '语文老师', '专业不限', NULL, '全职'), (9, '学管师（班主任老师）', '专业不限', NULL, '全职'), (10, '初高中语文、英语教师', '本科及以上学历、优秀应届毕业生优先', NULL, '全职'), (10, '初高中数学教师', '本科及以上学历、优秀应届毕业生优先', NULL, '全职'), (10, '初高中物理教师', '本科及以上学历、优秀应届毕业生优先', NULL, '全职'), (10, '初高中化学教师', '本科及以上学历、优秀应届毕业生优先', NULL, '全职'), (10, '初高中文综教师', '本科及以上学历、优秀应届毕业生优先', NULL, '全职'), (10, '教育咨询师', '本科及以上学历、优秀应届毕业生优先', NULL, '全职'), (11, '市场专员', '专业不限', NULL, '全职'), (11, '学习管理师', '专业不限', NULL, '全职'), (11, '学管实习生', '专业不限', NULL, '实习'), (12, '储备客户经理/证券经纪人', '金融、市场营销等相关专业优先', NULL, '全职'), (13, '亚马逊运营助理（北美站）', '电子商务、外语专业、国际贸易', NULL, '全职'), (13, '亚马逊运营助理（日本站）', '本科以上学历, 日语专业优先', NULL, '全职'), (13, '财务分析岗', '本科及以上学历, 财务、会计、经济、金融等相关专业', NULL, '全职'), (14, '区域销售经理', '专业不限', NULL, '全职'), (14, '产品设计助理', '专业不限', NULL, '全职'), (14, '主播', '专业不限', NULL, '全职'), (14, '电商美工摄影', '专业不限', NULL, '全职'), (15, '少儿英语老师', '具备优秀的英语口语表达能力', NULL, '全职'), (16, '中小学教师（语数英物化）', '专业不限', NULL, '全职'), (17, '教师', '专业不限', NULL, '全职'), (17, '学习管理师', '专业不限', NULL, '全职'), (17, '教育咨询师/课程顾问', '专业不限', NULL, '全职'), (18, '课程顾问', '专业不限', NULL, '全职'), (18, '市场专员', '专业不限', NULL, '全职'), (18, '项目运营', '专业不限', NULL, '全职'), (19, 'Doccontroller/助理', '专业不限', NULL, '全职'), (20, '生产管培生', '机械设计及自动化、车辆工程、材料成型、焊接等专业优先', NULL, '全职'), (20, '技术管培生', '机械设计及自动化、车辆工程、材料成型、焊接等专业优先', NULL, '全职'), (21, '厂务工程师', '土建土木/类相关', NULL, '全职'), (21, '零部件工程师', NULL, NULL, '全职'), (21, '质量策划工程师', NULL, NULL, '全职'), (21, '电气工程师', NULL, NULL, '全职'), (21, '结构工程师', '熟练使用软件Solidwork', NULL, '全职'), (21, '仓库主管', NULL, NULL, '全职'), (21, '业务经理', '专业不限, 英语口语熟练', NULL, '全职'), (22, '电气值班员', NULL, NULL, '全职'), (22, 'DSC中控系统操作员', NULL, NULL, '全职'), (22, '煮糖技术操作员', NULL, NULL, '全职'), (23, '总经理秘书', '英语、汉语言文学等相关专业', NULL, '全职'), (23, '机修储备干部', NULL, NULL, '全职'), (24, '销售内勤', '营销相关专业', NULL, '全职'), (24, '外贸业务员', '营销相关专业', NULL, '全职'), (24, '业务助理', '营销相关专业', NULL, '全职'), (25, '外贸业务员', '机械、电子、自动化相关、模具设计与制造专业优先', NULL, '全职'), (25, '储备干部', '机械、电子、自动化相关、模具设计与制造专业优先', NULL, '全职'), (26, '质量监理', '机械或材料类相关专业', NULL, '全职'), (26, '营销', '机械类、材料类、市场营销、国际贸易、英语、物流贸易等相关专业', NULL, '全职'), (26, '港口管理', NULL, NULL, '全职'), (27, '线材储备技术员', NULL, NULL, '全职'), (28, '电话协商客服', '法学专业、市场营销等专业优先', NULL, '全职'), (29, '人事行政专员', '行政管理、文秘相关专业', NULL, '全职'), (29, '会计', '财务会计相关专业', NULL, '全职'), (29, '储备干部', '船舶、机械、管理类本科应届', NULL, '全职'), (30, '销售管培生', NULL, NULL, '全职'), (30, '线下市场', NULL, NULL, '全职'), (30, '主播', NULL, NULL, '全职'), (30, '暑期实习', NULL, NULL, '实习'), (31, '外贸业务员', '英语、商务英语、国际贸易、市场营销等相关专业', NULL, '全职'), (31, '内贸业务员', NULL, NULL, '全职'), (31, '储备干部', NULL, NULL, '全职');
+
+-- 4. 插入事务性数据 (就业与审核记录)
+
+-- 插入就业信息数据 INSERT INTO employment_info (student_id, company_id, position_id, company_name, position, salary, employment_type, employment_date, contract_period, location, description, proof_material, status, reviewer_id, review_time) VALUES (3, 1, 1, '厦门柏孜科技有限公司', '机械机构工程师', 10000.00, 1, '2025-07-01', 36, '厦门市软件园二期', '负责机械设计和开发工作', '/uploads/proof/file1.pdf', 1, 1, '2025-05-10 14:30:00'), (4, 2, 6, '厦门三安光电有限公司', '设备技术员', 7000.00, 1, '2025-07-15', 24, '厦门市火炬高新区', '负责设备维护和技术支持', '/uploads/proof/file2.pdf', 1, 1, '2025-05-12 09:15:00'), (9, 9, 29, '厦门市思明区育龙课外培训学校', '高中数学老师', 9000.00, 1, '2025-08-01', 12, '厦门市思明区', '负责高中数学教学工作', '/uploads/proof/file3.pdf', 1, 2, '2025-05-14 16:45:00'), (10, 10, 34, '厦门肆大名补科技有限公司', '初高中物理教师', 8500.00, 1, '2025-07-20', 24, '厦门市湖里区', '负责初高中物理教学工作', '/uploads/proof/file4.pdf', 1, 2, '2025-05-13 11:20:00'), (18, 3, 8, '昕达丰（漳州）网络科技有限公司', '电商运营', 7500.00, 1, '2025-08-15', 12, '漳州市龙文区', '负责电商平台运营和推广', '/uploads/proof/file5.pdf', 1, 1, '2025-05-15 10:30:00'), (19, 5, 15, '东莞证券股份有限公司厦门分公司', '理财顾问', 8000.00, 1, '2025-07-10', 36, '厦门市思明区', '负责客户理财咨询和产品销售', '/uploads/proof/file6.pdf', 1, 2, '2025-05-11 15:40:00'), (24, 7, 21, '明达实业（厦门）有限公司', '技术研发类储备干部', 9000.00, 1, '2025-08-01', 24, '厦门市同安区', '参与产品研发和技术创新', '/uploads/proof/file7.pdf', 0, NULL, NULL), (25, 8, 23, '厦门安娃文化艺术培训有限公司', '英语老师', 7500.00, 1, '2025-07-15', 12, '厦门市思明区', '负责少儿英语教学工作', '/uploads/proof/file8.pdf', 2, 1, '2025-05-16 09:10:00'), (30, 6, 18, '福建福山轴承有限公司', '储备干部', 7000.00, 1, '2025-08-10', 24, '福建省福州市', '参与公司各部门轮岗实习', '/uploads/proof/file9.pdf', 0, NULL, NULL), (11, 11, 40, '厦门小盐网络科技有限公司', '学习管理师', 6800.00, 1, '2025-07-25', 12, '厦门市思明区', '负责学生学习管理和跟踪', '/uploads/proof/file10.pdf', 0, NULL, NULL), (12, 12, 43, '华宝证券股份有限公司厦门吕岭路证券营业部', '储备客户经理/证券经纪人', 8500.00, 1, '2025-08-05', 24, '厦门市思明区', '负责客户开发和理财产品销售', '/uploads/proof/file11.pdf', 0, NULL, NULL), (13, 13, 44, '厦门千万艺进出口有限公司', '亚马逊运营助理（北美站）', 7200.00, 1, '2025-07-30', 12, '厦门市湖里区', '负责北美站点产品上架和运营', '/uploads/proof/file12.pdf', 0, NULL, NULL);
+
+-- 插入审核记录数据 INSERT INTO review_record (employment_id, reviewer_id, review_result, reject_reason, review_time) VALUES (1, 1, 1, NULL, '2025-05-10 14:30:00'), (2, 1, 1, NULL, '2025-05-12 09:15:00'), (3, 2, 1, NULL, '2025-05-14 16:45:00'), (4, 2, 1, NULL, '2025-05-13 11:20:00'), (5, 1, 1, NULL, '2025-05-15 10:30:00'), (6, 2, 1, NULL, '2025-05-11 15:40:00'), (8, 1, 2, '提供的就业证明材料不完整，请补充劳动合同复印件', '2025-05-16 09:10:00');
+
+-- 5. 创建触发器、视图和存储过程
+
+-- 创建触发器：当审核通过时，检查该学生是否已有通过的记录 DELIMITER // CREATE TRIGGER before_employment_approve BEFORE UPDATE ON employment_info FOR EACH ROW BEGIN IF NEW.status = 1 AND OLD.status <> 1 THEN IF EXISTS (SELECT 1 FROM employment_info WHERE student_id = NEW.student_id AND status = 1 AND id <> NEW.id) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '该学生已有通过审核的就业记录'; END IF; END IF; END // DELIMITER ;
+
+-- 创建视图：已就业学生视图 CREATE OR REPLACE VIEW v_employed_students AS SELECT u.id AS student_id, u.username AS student_no, u.real_name, u.gender, m.major_name, c.class_name, e.company_name, e.position, e.salary, CASE e.employment_type WHEN 1 THEN '企业' WHEN 2 THEN '事业单位' WHEN 3 THEN '公务员' WHEN 4 THEN '自主创业' WHEN 5 THEN '升学' WHEN 6 THEN '其他' END AS employment_type, e.employment_date, e.location, e.review_time, comp.company_type, jp.job_type FROM user u JOIN class c ON u.class_id = c.id JOIN major m ON c.major_id = m.id JOIN employment_info e ON u.id = e.student_id JOIN company comp ON e.company_id = comp.id JOIN job_position jp ON e.position_id = jp.id WHERE e.status = 1;
+
+-- 创建视图：待审核就业信息视图 CREATE OR REPLACE VIEW v_pending_review AS SELECT e.id AS employment_id, u.id AS student_id, u.username AS student_no, u.real_name, m.major_name, c.class_name, e.company_name, e.position, e.salary, e.employment_type, e.employment_date, e.create_time AS submit_time, comp.company_type, jp.job_type, jp.position_requirement FROM employment_info e JOIN user u ON e.student_id = u.id JOIN class c ON u.class_id = c.id JOIN major m ON c.major_id = m.id JOIN company comp ON e.company_id = comp.id JOIN job_position jp ON e.position_id = jp.id WHERE e.status = 0;
+
+-- 创建存储过程：按专业统计就业率 (已优化) DELIMITER // CREATE PROCEDURE sp_employment_statistics_by_major() BEGIN SELECT m.major_name, COUNT(DISTINCT u.id) AS total_students, COUNT(DISTINCT CASE WHEN e.status = 1 THEN u.id END) AS employed_students, IF(COUNT(DISTINCT u.id) > 0, ROUND(COUNT(DISTINCT CASE WHEN e.status = 1 THEN u.id END) * 100 / COUNT(DISTINCT u.id), 2), 0) AS employment_rate FROM major m LEFT JOIN class c ON m.id = c.major_id LEFT JOIN user u ON c.id = u.class_id AND u.user_type = 1 LEFT JOIN employment_info e ON u.id = e.student_id AND e.status = 1 GROUP BY m.id, m.major_name; END // DELIMITER ;
+
+-- 创建存储过程：按就业类型统计 (已优化) DELIMITER // CREATE PROCEDURE sp_employment_statistics_by_type() BEGIN DECLARE total_employed INT; SELECT COUNT(*) INTO total_employed FROM employment_info WHERE status = 1;
+
+SELECT CASE e.employment_type WHEN 1 THEN '企业' WHEN 2 THEN '事业单位' WHEN 3 THEN '公务员' WHEN 4 THEN '自主创业' WHEN 5 THEN '升学' WHEN 6 THEN '其他' END AS employment_type, COUNT() AS count, IF(total_employed > 0, ROUND(COUNT() * 100 / total_employed, 2), 0) AS percentage FROM employment_info e WHERE e.status = 1 GROUP BY e.employment_type; END // DELIMITER ;
+
+-- 创建存储过程：按企业类型统计 (已优化) DELIMITER // CREATE PROCEDURE sp_employment_statistics_by_company_type() BEGIN DECLARE total_employed INT; SELECT COUNT(*) INTO total_employed FROM employment_info WHERE status = 1;
+
+SELECT c.company_type, COUNT() AS count, IF(total_employed > 0, ROUND(COUNT() * 100 / total_employed, 2), 0) AS percentage FROM employment_info e JOIN company c ON e.company_id = c.id WHERE e.status = 1 GROUP BY c.company_type; END // DELIMITER ;
+
+-- 创建存储过程：按工作地点统计 (已优化) DELIMITER // CREATE PROCEDURE sp_employment_statistics_by_location() BEGIN DECLARE total_employed INT; SELECT COUNT(*) INTO total_employed FROM employment_info WHERE status = 1;
+
+SELECT SUBSTRING_INDEX(e.location, '市', 1) AS city, COUNT() AS count, IF(total_employed > 0, ROUND(COUNT() * 100 / total_employed, 2), 0) AS percentage FROM employment_info e WHERE e.status = 1 GROUP BY city; END // DELIMITER ;
